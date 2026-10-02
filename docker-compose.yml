@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  okx-trading-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: okx-trading-bot
+    restart: unless-stopped
+    command: ["python", "tests/rsi_trading_bot.py"]
+    env_file:
+      # .env 可提交。.env.local 放密钥并覆盖同名变量。没有密钥文件时不阻断配置解析。
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
+    environment:
+      # 交易配置来自可提交的 .env。密钥不在这里插值，避免把 ${OKX_API_KEY} 当成字面量。
+      - SWAP_NAME=${SWAP_NAME:-BTC-USDT-SWAP}
+      - PER_NUMBER=${PER_NUMBER:-0.02}
+      - TZ=${TZ:-Asia/Shanghai}
+    volumes:
+      # 挂载日志目录到宿主机
+      - ./logs:/app/logs
+      # 可选：挂载配置文件
+      - ./config:/app/config
+    networks:
+      - okx-network
+    # 可选：资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  rsi-backtest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: okx-sdk:backtest
+    container_name: okx-rsi-backtest
+    profiles: ["backtest"]
+    restart: "no"
+    command: ["python", "tests/rsi_backtest.py"]
+
+networks:
+  okx-network:
+    driver: bridge
+

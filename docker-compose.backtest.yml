@@ -1,0 +1,11 @@
+# 离线回测。不读取密钥，K 线在构建时打进镜像。
+# 用法: docker compose -f docker-compose.backtest.yml run --rm rsi-backtest
+services:
+  rsi-backtest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-docker.m.daocloud.io/library/python:3.10-slim}
+    image: okx-sdk:backtest
+    command: ["python", "tests/rsi_backtest.py"]
